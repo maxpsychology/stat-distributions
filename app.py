@@ -332,7 +332,7 @@ with recent_box:
         )
         st.markdown(f"<div class='recent-values'>{items}</div>", unsafe_allow_html=True)
 
-# ------------- Nagłówek -------------
+ ------------- Nagłówek -------------
 var_label_display = html.escape(var_label)
 st.markdown(
     f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
