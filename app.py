@@ -42,7 +42,10 @@ st.markdown(
     [data-testid="stSidebar"] {
         background: rgba(16, 22, 60, 0.82);
         backdrop-filter: blur(18px);
-        color: #f8f9ff;
+        color: #ffffff;
+    }
+    [data-testid="stSidebar"] * {
+        color: inherit !important;
     }
     [data-testid="stSidebar"] .stNumberInput input,
     [data-testid="stSidebar"] .stTextInput input {
@@ -323,6 +326,12 @@ with recent_box:
             for v in reversed(recent_values)
         )
         st.markdown(f"<div class='recent-values'>{items}</div>", unsafe_allow_html=True)
+# ------------- Nagłówek -------------
+var_label_display = html.escape(var_label)
+st.markdown(
+    f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
+    unsafe_allow_html=True,
+)
 
 # ------------- Nagłówek -------------
 var_label_display = html.escape(var_label)
