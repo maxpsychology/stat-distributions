@@ -1,16 +1,162 @@
+import html
 import sqlite3
 import threading
+from datetime import datetime
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.stats import skew, kurtosis, gaussian_kde
+from scipy.stats import gaussian_kde, kurtosis, skew
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-from datetime import datetime
 
 # ------------- Konfiguracja podstawowa -------------
 st.set_page_config(page_title="Żywy histogram (Streamlit)", page_icon="📊", layout="wide")
+
+st.markdown(
+    """
+    <style>
+    :root {
+        --gradient-primary: linear-gradient(135deg, #2834c2, #783ed3);
+        --gradient-secondary: linear-gradient(135deg, rgba(40, 52, 194, 0.08), rgba(120, 62, 211, 0.12));
+        --surface: rgba(255, 255, 255, 0.78);
+        --surface-strong: rgba(255, 255, 255, 0.92);
+        --text-strong: #101635;
+        --text-muted: #43507a;
+    }
+    * {
+        font-family: "Inter", "Segoe UI", sans-serif !important;
+    }
+    .stApp {
+        background: radial-gradient(circle at 15% 20%, rgba(120, 62, 211, 0.22), transparent 45%),
+                    radial-gradient(circle at 85% 10%, rgba(40, 52, 194, 0.28), transparent 40%),
+                    radial-gradient(circle at 20% 80%, rgba(15, 192, 225, 0.16), transparent 40%),
+                    #f7f9ff;
+        color: var(--text-strong);
+    }
+    .block-container {
+        padding-top: 1.75rem;
+    }
+    [data-testid="stSidebar"] {
+        background: rgba(14, 22, 62, 0.75);
+        backdrop-filter: blur(18px);
+        color: #f5f7ff;
+    }
+    [data-testid="stSidebar"] .stNumberInput input,
+    [data-testid="stSidebar"] .stTextInput input {
+        border-radius: 0.75rem;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(255, 255, 255, 0.16);
+        color: #fff;
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    [data-testid="stSidebar"] .stButton button,
+    [data-testid="stSidebar"] .stDownloadButton button {
+        border-radius: 999px;
+        border: none;
+        background: var(--gradient-primary);
+        color: white;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        box-shadow: 0 14px 30px rgba(39, 52, 194, 0.28);
+    }
+    [data-testid="stSidebar"] .value-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.45rem;
+        margin-top: 0.5rem;
+    }
+    [data-testid="stSidebar"] .value-chip {
+        background: rgba(255, 255, 255, 0.18);
+        color: #f5f7ff;
+        padding: 0.28rem 0.65rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        letter-spacing: 0.01em;
+    }
+    .main-title {
+        font-size: clamp(2.5rem, 3.8vw, 3.6rem);
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        margin-bottom: 0.6rem;
+        color: var(--text-strong);
+    }
+    .main-title span {
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        white-space: pre-wrap;
+    }
+    .main-subtitle {
+        font-size: 1.05rem;
+        color: var(--text-muted);
+        margin-bottom: 1.6rem;
+    }
+    .stat-card {
+        background: var(--surface);
+        border-radius: 1rem;
+        padding: 1.2rem;
+        box-shadow: 0 24px 48px rgba(16, 22, 53, 0.12);
+        border: 1px solid rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(14px);
+    }
+    .stat-list {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.55rem;
+    }
+    .stat-list li {
+        font-size: 1.18rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0.85rem;
+        border-radius: 0.75rem;
+        background: rgba(255, 255, 255, 0.72);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
+                    0 18px 30px rgba(33, 41, 92, 0.12);
+    }
+    .stat-list li span.label {
+        color: var(--text-muted);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+    }
+    .stat-list li span.value {
+        color: var(--text-strong);
+        font-family: "Fira Code", "Source Code Pro", monospace;
+        font-size: 1.2rem;
+    }
+    .stPlotlyChart, .stVegaLiteChart, .stPyplot {
+        border-radius: 1.2rem !important;
+        padding: 1.3rem !important;
+        background: var(--surface-strong);
+        box-shadow: 0 28px 60px rgba(16, 22, 53, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(16px);
+    }
+    .stRadio > label {
+        font-weight: 700;
+        letter-spacing: 0.02em;
+    }
+    .metric-subheader {
+        font-size: 1.15rem;
+        letter-spacing: 0.08em;
+        color: rgba(255, 255, 255, 0.82);
+        text-transform: uppercase;
+    }
+    .stDivider { margin: 1.4rem 0; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 DB_PATH = Path("data.db")
 DB_LOCK = threading.Lock()
@@ -52,16 +198,26 @@ def read_values(limit: int | None = None) -> pd.DataFrame:
     return df
 
 # ------------- Sidebar (sterowanie) -------------
+def format_value(value: float, decimals: int = 3) -> str:
+    if value is None or (isinstance(value, (float, np.floating)) and (np.isnan(value) or not np.isfinite(value))):
+        return "—"
+    formatted = f"{float(value):.{decimals}f}"
+    formatted = formatted.rstrip("0").rstrip(".")
+    return formatted if formatted else "0"
+
+
 with st.sidebar:
     st.header("⚙️ Ustawienia")
     var_label = st.text_input("Etykieta zmiennej", value="Godziny snu")
 
-    number = st.number_input("Twoja wartość", value=None, placeholder="np. 7.5", step=0.1, format="%.6f")
+    number = st.number_input("Twoja wartość", value=None, placeholder="np. 7.5", step=0.1, format="%.3f")
     col_add1, col_add2 = st.columns([1,1])
     with col_add1:
         add_btn = st.button("➕ Dodaj wartość", use_container_width=True)
     with col_add2:
         refresh_btn = st.button("🔄 Odśwież teraz", use_container_width=True)
+
+    recent_box = st.container()
 
     st.divider()
     plot_type = st.radio("Rodzaj wykresu", options=["Histogram", "Boxplot"], horizontal=True)
@@ -103,7 +259,10 @@ if reset_btn:
     st.toast("Dane wyczyszczone.", icon="🧹")
 
 if refresh_btn:
-    st.experimental_rerun()
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
 
 if auto_refresh:
     st_autorefresh(interval=2000, limit=None, key="auto_refresh_key")
@@ -112,9 +271,28 @@ if auto_refresh:
 df = read_values()
 x = df["value"].to_numpy(dtype=float) if not df.empty else np.array([])
 
+with recent_box:
+    st.markdown("<p class='metric-subheader'>🗒️ Ostatnie wartości</p>", unsafe_allow_html=True)
+    if df.empty:
+        st.write("—")
+    else:
+        recent_values = df.tail(10)["value"].tolist()
+        chips = "".join(
+            f"<span class='value-chip'>{format_value(v, 2)}</span>"
+            for v in reversed(recent_values)
+        )
+        st.markdown(f"<div class='value-chips'>{chips}</div>", unsafe_allow_html=True)
+
 # ------------- Nagłówek -------------
-st.title("📊 Żywy histogram — wspólne zbieranie danych")
-st.markdown(f"**Zmienna:** _{var_label}_")
+var_label_display = html.escape(var_label)
+st.markdown(
+    f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "<p class='main-subtitle'>Podglądaj bieżące dane uczestników na żywo w estetycznym ujęciu.</p>",
+    unsafe_allow_html=True,
+)
 
 # ------------- Główna siatka -------------
 left, right = st.columns([2, 1], gap="large")
@@ -169,16 +347,23 @@ with right:
         stats["Min"] = np.nanmin(x)
         stats["Max"] = np.nanmax(x)
 
-        out = pd.DataFrame({k: [np.round(v, 4) if isinstance(v, (int, float, np.floating)) else v]
-                            for k, v in stats.items()})
-        st.table(out)
+        stat_items = []
+        for key, value in stats.items():
+            if isinstance(value, (int, np.integer)):
+                display_value = f"{int(value)}"
+            else:
+                display_value = format_value(value, 3)
+            stat_items.append((key, display_value))
 
-    st.subheader("Ostatnie wpisy")
-    df_last = read_values(limit=10)
-    if df_last.empty:
-        st.write("—")
-    else:
-        st.write(", ".join(f"{v:.4g}" for v in df_last["value"]))
+        st.markdown(
+            "<div class='stat-card'><ul class='stat-list'>" +
+            "".join(
+                f"<li><span class='label'>{label}</span><span class='value'>{val}</span></li>"
+                for label, val in stat_items
+            ) +
+            "</ul></div>",
+            unsafe_allow_html=True,
+        )
 
 st.divider()
 with st.expander("ℹ️ Informacje techniczne / prywatność"):
