@@ -40,12 +40,10 @@ st.markdown(
         padding-bottom: 3rem;
     }
     [data-testid="stSidebar"] {
-        background: rgba(16, 22, 60, 0.82);
+        background: linear-gradient(184deg, rgba(247, 248, 255, 0.95), rgba(226, 232, 255, 0.9));
         backdrop-filter: blur(18px);
-        color: #ffffff;
-    }
-    [data-testid="stSidebar"] * {
-        color: inherit !important;
+        color: #1b2342;
+        border-right: 1px solid rgba(16, 22, 60, 0.08);
     }
     [data-testid="stSidebar"] .stNumberInput input,
     [data-testid="stSidebar"] .stTextInput input {
@@ -70,12 +68,18 @@ st.markdown(
         letter-spacing: 0.02em;
         box-shadow: 0 16px 34px rgba(44, 58, 189, 0.35);
     }
-    .metric-subheader {
-        font-size: 1.05rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        color: rgba(255, 255, 255, 0.85);
+    [data-testid="stSidebar"] .stButton button[kind="secondary"],
+    [data-testid="stSidebar"] .stDownloadButton button[kind="secondary"] {
+        background: rgba(255, 255, 255, 0.95);
+        color: #1b2342 !important;
+        border: 1px solid rgba(16, 22, 60, 0.12);
+        box-shadow: 0 8px 18px rgba(16, 22, 60, 0.12);
+    }
+        color: rgba(16, 22, 60, 0.8);
         margin-bottom: 0.3rem;
+    }
+    [data-testid="stSidebar"] :is(p, label, h1, h2, h3, h4, h5, h6, li) {
+        color: #1b2342;
     }
     .recent-values {
         display: grid;
@@ -83,9 +87,9 @@ st.markdown(
         margin-top: 0.5rem;
     }
     .recent-values span {
-        background: rgba(255, 255, 255, 0.16);
-        color: inherit;
-        border-radius: 0.65rem;
+        background: rgba(16, 22, 60, 0.08);
+        color: #0f163a;
+       border-radius: 0.65rem;
         padding: 0.4rem 0.75rem;
         font-size: 1.05rem;
         font-weight: 600;
@@ -150,7 +154,7 @@ st.markdown(
     .stat-list li span.value {
         color: var(--text-strong);
         font-family: "Fira Code", "Source Code Pro", monospace;
-        font-size: clamp(1.45rem, 3vw, 1.85rem);
+        font-size: clamp(1.25rem, 2.6vw, 1.6rem);
         font-weight: 700;
     }
     .stPlotlyChart, .stVegaLiteChart, .stPyplot {
@@ -332,7 +336,7 @@ with recent_box:
         )
         st.markdown(f"<div class='recent-values'>{items}</div>", unsafe_allow_html=True)
 
- ------------- Nagłówek -------------
+# ------------- Nagłówek -------------
 var_label_display = html.escape(var_label)
 st.markdown(
     f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
