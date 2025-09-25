@@ -404,7 +404,7 @@ with right:
                 for label, val in stat_items
             ) +
             "</ul></div>",
-            unsafe_allow_html=True,
+           unsafe_allow_html=True,
         )
 
 st.divider()
