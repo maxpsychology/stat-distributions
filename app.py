@@ -75,10 +75,6 @@ st.markdown(
         border: 1px solid rgba(16, 22, 60, 0.12);
         box-shadow: 0 8px 18px rgba(16, 22, 60, 0.12);
     }
-    .metric-subheader {
-        font-size: 1.05rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
         color: rgba(16, 22, 60, 0.8);
         margin-bottom: 0.3rem;
     }
@@ -93,7 +89,7 @@ st.markdown(
     .recent-values span {
         background: rgba(16, 22, 60, 0.08);
         color: #0f163a;
-        border-radius: 0.65rem;
+       border-radius: 0.65rem;
         padding: 0.4rem 0.75rem;
         font-size: 1.05rem;
         font-weight: 600;
