@@ -18,21 +18,21 @@ st.markdown(
     """
     <style>
     :root {
-        --gradient-primary: linear-gradient(135deg, #2f3cc9, #a334d6);
-        --surface: rgba(255, 255, 255, 0.82);
-        --surface-strong: rgba(255, 255, 255, 0.95);
-        --text-strong: #111a3a;
-        --text-muted: #4a5785;
+        --gradient-primary: linear-gradient(135deg, #4250e3, #b347e6);
+        --surface: rgba(255, 255, 255, 0.9);
+        --surface-strong: rgba(255, 255, 255, 0.98);
+        --text-strong: #10163a;
+        --text-muted: #4c5687;
     }
     * {
         font-family: "Inter", "Segoe UI", sans-serif !important;
     }
     .stApp {
         background:
-            radial-gradient(circle at 18% 20%, rgba(163, 52, 214, 0.18), transparent 52%),
-            radial-gradient(circle at 80% 15%, rgba(47, 60, 201, 0.22), transparent 46%),
-            radial-gradient(circle at 20% 85%, rgba(16, 197, 222, 0.12), transparent 45%),
-            #f6f7ff;
+            radial-gradient(circle at 12% 18%, rgba(179, 71, 230, 0.14), transparent 46%),
+            radial-gradient(circle at 82% 12%, rgba(66, 80, 227, 0.18), transparent 44%),
+            radial-gradient(circle at 25% 82%, rgba(42, 210, 231, 0.16), transparent 48%),
+            #f7f8ff;
         color: var(--text-strong);
     }
     .block-container {
@@ -40,9 +40,9 @@ st.markdown(
         padding-bottom: 3rem;
     }
     [data-testid="stSidebar"] {
-        background: rgba(14, 22, 62, 0.78);
+        background: rgba(16, 22, 60, 0.82);
         backdrop-filter: blur(18px);
-        color: #f6f7ff;
+        color: #f8f9ff;
     }
     [data-testid="stSidebar"] .stNumberInput input,
     [data-testid="stSidebar"] .stTextInput input {
@@ -84,10 +84,10 @@ st.markdown(
         letter-spacing: 0.01em;
     }
     .main-title {
-        font-size: clamp(2.4rem, 3.5vw, 3.4rem);
+        font-size: clamp(2.8rem, 4vw, 4rem);
         font-weight: 800;
         letter-spacing: -0.03em;
-        margin-bottom: 0.4rem;
+        margin-bottom: 1.2rem;
         color: var(--text-strong);
     }
     .main-title span {
@@ -96,10 +96,17 @@ st.markdown(
         background-clip: text;
         color: transparent;
     }
-    .main-subtitle {
-        font-size: 1.05rem;
-        color: var(--text-muted);
-        margin-bottom: 1.5rem;
+    .panel-card {
+        background: var(--surface);
+        border-radius: 1.2rem;
+        padding: 1.4rem 1.6rem;
+        box-shadow: 0 26px 56px rgba(22, 29, 68, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.58);
+        backdrop-filter: blur(18px);
+    }
+    .visual-panel {
+        display: grid;
+        gap: 1.2rem;
     }
     .stat-card {
         background: var(--surface);
@@ -141,9 +148,9 @@ st.markdown(
     .stPlotlyChart, .stVegaLiteChart, .stPyplot {
         border-radius: 1.15rem !important;
         padding: 1.25rem !important;
-        background: var(--surface);
-        box-shadow: 0 28px 60px rgba(20, 26, 60, 0.14);
-        border: 1px solid rgba(255, 255, 255, 0.42);
+        background: var(--surface-strong);
+        box-shadow: 0 32px 68px rgba(24, 32, 74, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.6);
         backdrop-filter: blur(18px);
     }
     .stRadio > label {
@@ -323,24 +330,28 @@ st.markdown(
     f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
     unsafe_allow_html=True,
 )
-st.markdown(
-    "<p class='main-subtitle'>Podglądaj bieżące dane uczestników na żywo w estetycznym ujęciu.</p>",
-    unsafe_allow_html=True,
-)
-
 # ------------- Główna siatka -------------
 left, right = st.columns([2, 1], gap="large")
 
 with left:
+    st.markdown("<div class='panel-card visual-panel'>", unsafe_allow_html=True)
     st.subheader("Wizualizacja")
     if x.size == 0:
         st.info("Brak danych. Poproś studentów o wpisanie pierwszych wartości po lewej stronie.")
     else:
         fig = plt.figure(figsize=(8, 4.8))
+        fig.patch.set_facecolor("white")
         ax = plt.gca()
+        ax.set_facecolor("white")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.tick_params(colors="#1a2242")
+        ax.title.set_color("#1a2242")
+        ax.xaxis.label.set_color("#1a2242")
+        ax.yaxis.label.set_color("#1a2242")
 
         if plot_type == "Histogram":
-            ax.hist(x, bins=bins, edgecolor="black")
+            ax.hist(x, bins=bins, edgecolor="#1a2242", color="#8796ff")
             ax.set_title(f"Histogram — {var_label}")
             ax.set_xlabel(var_label)
             ax.set_ylabel("Liczebność")
@@ -352,16 +363,27 @@ with left:
                     ys = kde(xs)
                     counts, _ = np.histogram(x, bins=bins)
                     scale = counts.max() / ys.max() if ys.max() > 0 else 1.0
-                    ax.plot(xs, ys * scale, linewidth=2)
+                    ax.plot(xs, ys * scale, linewidth=2, color="#4b3ae0")
                 except Exception:
                     pass
 
         else:  # Boxplot
-            ax.boxplot(x, vert=False, whis=1.5)
+            ax.boxplot(
+                x,
+                vert=False,
+                whis=1.5,
+                patch_artist=True,
+                boxprops=dict(facecolor="#dbe1ff", color="#3a49c0", linewidth=2),
+                medianprops=dict(color="#1a2242", linewidth=2.2),
+                whiskerprops=dict(color="#3a49c0", linewidth=1.6),
+                capprops=dict(color="#3a49c0", linewidth=1.6),
+                flierprops=dict(markerfacecolor="#ffffff", markeredgecolor="#3a49c0"),
+            )
             ax.set_title(f"Boxplot — {var_label}")
             ax.set_xlabel(var_label)
 
         st.pyplot(fig, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with right:
     st.subheader("Statystyki opisowe")
@@ -404,7 +426,7 @@ with right:
                 for label, val in stat_items
             ) +
             "</ul></div>",
-           unsafe_allow_html=True,
+            unsafe_allow_html=True,
         )
 
 st.divider()
