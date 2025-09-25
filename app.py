@@ -1,16 +1,87 @@
 import sqlite3
 import threading
+from datetime import datetime
 from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.stats import skew, kurtosis, gaussian_kde
+from scipy.stats import gaussian_kde, kurtosis, skew
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
-from datetime import datetime
 
 # ------------- Konfiguracja podstawowa -------------
 st.set_page_config(page_title="Żywy histogram (Streamlit)", page_icon="📊", layout="wide")
+
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background: linear-gradient(135deg, rgba(244, 248, 255, 0.9), rgba(255, 247, 252, 0.9));
+    }
+    [data-testid="stSidebar"] {
+        background: linear-gradient(160deg, rgba(27, 72, 128, 0.12), rgba(255, 255, 255, 0.85));
+    }
+    [data-testid="stSidebar"] .stNumberInput input {
+        font-size: 1.05rem;
+        font-weight: 600;
+    }
+    [data-testid="stSidebar"] .value-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+        margin-top: 0.35rem;
+    }
+    [data-testid="stSidebar"] .value-chip {
+        background: rgba(27, 72, 128, 0.12);
+        color: #1a3c6b;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+    .stat-list {
+        list-style: none;
+        padding-left: 0;
+        margin: 0;
+    }
+    .stat-list li {
+        font-size: 1.15rem;
+        font-weight: 500;
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0.65rem;
+        margin-bottom: 0.4rem;
+        border-radius: 0.6rem;
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: 0 4px 18px rgba(26, 60, 107, 0.08);
+    }
+    .stat-list li span.label {
+        color: #15355e;
+        letter-spacing: 0.01em;
+    }
+    .stat-list li span.value {
+        color: #0d2140;
+        font-family: "Fira Code", "Source Code Pro", monospace;
+    }
+    .stPlotlyChart, .stVegaLiteChart, .stPyplot {
+        border-radius: 1rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.75);
+        box-shadow: 0 12px 40px rgba(21, 53, 94, 0.12);
+    }
+    .stRadio > label {
+        font-weight: 600;
+    }
+    .metric-subheader {
+        font-size: 1.05rem;
+        letter-spacing: 0.03em;
+        color: #173a66;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 DB_PATH = Path("data.db")
 DB_LOCK = threading.Lock()
@@ -52,16 +123,26 @@ def read_values(limit: int | None = None) -> pd.DataFrame:
     return df
 
 # ------------- Sidebar (sterowanie) -------------
+def format_value(value: float, decimals: int = 3) -> str:
+    if value is None or (isinstance(value, (float, np.floating)) and (np.isnan(value) or not np.isfinite(value))):
+        return "—"
+    formatted = f"{float(value):.{decimals}f}"
+    formatted = formatted.rstrip("0").rstrip(".")
+    return formatted if formatted else "0"
+
+
 with st.sidebar:
     st.header("⚙️ Ustawienia")
     var_label = st.text_input("Etykieta zmiennej", value="Godziny snu")
 
-    number = st.number_input("Twoja wartość", value=None, placeholder="np. 7.5", step=0.1, format="%.6f")
+    number = st.number_input("Twoja wartość", value=None, placeholder="np. 7.5", step=0.1, format="%.3f")
     col_add1, col_add2 = st.columns([1,1])
     with col_add1:
         add_btn = st.button("➕ Dodaj wartość", use_container_width=True)
     with col_add2:
         refresh_btn = st.button("🔄 Odśwież teraz", use_container_width=True)
+
+    recent_box = st.container()
 
     st.divider()
     plot_type = st.radio("Rodzaj wykresu", options=["Histogram", "Boxplot"], horizontal=True)
@@ -103,7 +184,10 @@ if reset_btn:
     st.toast("Dane wyczyszczone.", icon="🧹")
 
 if refresh_btn:
-    st.experimental_rerun()
+    try:
+        st.rerun()
+    except AttributeError:
+        st.experimental_rerun()
 
 if auto_refresh:
     st_autorefresh(interval=2000, limit=None, key="auto_refresh_key")
@@ -111,6 +195,18 @@ if auto_refresh:
 # ------------- Dane -------------
 df = read_values()
 x = df["value"].to_numpy(dtype=float) if not df.empty else np.array([])
+
+with recent_box:
+    st.markdown("<p class='metric-subheader'>🗒️ Ostatnie wartości</p>", unsafe_allow_html=True)
+    if df.empty:
+        st.write("—")
+    else:
+        recent_values = df.tail(10)["value"].tolist()
+        chips = "".join(
+            f"<span class='value-chip'>{format_value(v, 2)}</span>"
+            for v in reversed(recent_values)
+        )
+        st.markdown(f"<div class='value-chips'>{chips}</div>", unsafe_allow_html=True)
 
 # ------------- Nagłówek -------------
 st.title("📊 Żywy histogram — wspólne zbieranie danych")
@@ -169,16 +265,23 @@ with right:
         stats["Min"] = np.nanmin(x)
         stats["Max"] = np.nanmax(x)
 
-        out = pd.DataFrame({k: [np.round(v, 4) if isinstance(v, (int, float, np.floating)) else v]
-                            for k, v in stats.items()})
-        st.table(out)
+        stat_items = []
+        for key, value in stats.items():
+            if isinstance(value, (int, np.integer)):
+                display_value = f"{int(value)}"
+            else:
+                display_value = format_value(value, 3)
+            stat_items.append((key, display_value))
 
-    st.subheader("Ostatnie wpisy")
-    df_last = read_values(limit=10)
-    if df_last.empty:
-        st.write("—")
-    else:
-        st.write(", ".join(f"{v:.4g}" for v in df_last["value"]))
+        st.markdown(
+            "<ul class='stat-list'>" +
+            "".join(
+                f"<li><span class='label'>{label}</span><span class='value'>{val}</span></li>"
+                for label, val in stat_items
+            ) +
+            "</ul>",
+            unsafe_allow_html=True,
+        )
 
 st.divider()
 with st.expander("ℹ️ Informacje techniczne / prywatność"):
