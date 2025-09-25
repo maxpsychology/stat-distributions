@@ -330,7 +330,6 @@ st.markdown(
     f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
     unsafe_allow_html=True,
 )
-
 # ------------- Główna siatka -------------
 left, right = st.columns([2, 1], gap="large")
 
