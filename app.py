@@ -62,21 +62,6 @@ st.markdown(
         letter-spacing: 0.02em;
         box-shadow: 0 14px 30px rgba(39, 52, 194, 0.28);
     }
-    [data-testid="stSidebar"] .value-chips {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.45rem;
-        margin-top: 0.5rem;
-    }
-    [data-testid="stSidebar"] .value-chip {
-        background: rgba(255, 255, 255, 0.18);
-        color: #f5f7ff;
-        padding: 0.28rem 0.65rem;
-        border-radius: 999px;
-        font-weight: 600;
-        font-size: 0.95rem;
-        letter-spacing: 0.01em;
-    }
     .main-title {
         font-size: clamp(2.5rem, 3.8vw, 3.6rem);
         font-weight: 800;
@@ -109,30 +94,43 @@ st.markdown(
         padding-left: 0;
         margin: 0;
         display: grid;
-        gap: 0.55rem;
+        gap: 0.75rem;
     }
     .stat-list li {
-        font-size: 1.18rem;
-        font-weight: 600;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.75rem 0.85rem;
-        border-radius: 0.75rem;
-        background: rgba(255, 255, 255, 0.72);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65),
-                    0 18px 30px rgba(33, 41, 92, 0.12);
+        display: grid;
+        gap: 0.35rem;
+        align-items: start;
+        padding: 1rem 1.1rem;
+        border-radius: 0.9rem;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                    0 18px 38px rgba(33, 41, 92, 0.16);
     }
     .stat-list li span.label {
         color: var(--text-muted);
-        letter-spacing: 0.02em;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
-        font-size: 0.85rem;
+        font-size: 0.92rem;
     }
     .stat-list li span.value {
         color: var(--text-strong);
         font-family: "Fira Code", "Source Code Pro", monospace;
-        font-size: 1.2rem;
+        font-size: clamp(1.45rem, 3vw, 1.8rem);
+        font-weight: 700;
+    }
+    .recent-values {
+        display: grid;
+        gap: 0.3rem;
+        margin-top: 0.6rem;
+    }
+    .recent-values span {
+        background: rgba(255, 255, 255, 0.16);
+        color: #f5f7ff;
+        border-radius: 0.65rem;
+        padding: 0.4rem 0.75rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
     }
     .stPlotlyChart, .stVegaLiteChart, .stPyplot {
         border-radius: 1.2rem !important;
@@ -198,10 +196,21 @@ def read_values(limit: int | None = None) -> pd.DataFrame:
     return df
 
 # ------------- Sidebar (sterowanie) -------------
-def format_value(value: float, decimals: int = 3) -> str:
-    if value is None or (isinstance(value, (float, np.floating)) and (np.isnan(value) or not np.isfinite(value))):
+def format_value(value: float | int | None, decimals: int = 3) -> str:
+    if value is None:
         return "—"
-    formatted = f"{float(value):.{decimals}f}"
+
+    if isinstance(value, (float, np.floating)) and (np.isnan(value) or not np.isfinite(value)):
+        return "—"
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return "—"
+
+    if decimals == 0:
+        return f"{int(round(numeric_value))}"
+
+    formatted = f"{numeric_value:.{decimals}f}"
     formatted = formatted.rstrip("0").rstrip(".")
     return formatted if formatted else "0"
 
@@ -277,11 +286,11 @@ with recent_box:
         st.write("—")
     else:
         recent_values = df.tail(10)["value"].tolist()
-        chips = "".join(
-            f"<span class='value-chip'>{format_value(v, 2)}</span>"
+        items = "".join(
+            f"<span>{format_value(v, 2)}</span>"
             for v in reversed(recent_values)
         )
-        st.markdown(f"<div class='value-chips'>{chips}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='recent-values'>{items}</div>", unsafe_allow_html=True)
 
 # ------------- Nagłówek -------------
 var_label_display = html.escape(var_label)
@@ -347,12 +356,22 @@ with right:
         stats["Min"] = np.nanmin(x)
         stats["Max"] = np.nanmax(x)
 
+        stat_precision = {
+            "N": 0,
+            "Mean": 2,
+            "Median": 2,
+            "Variance": 3,
+            "SD": 2,
+            "Skewness": 3,
+            "Kurtosis (excess)": 3,
+            "Min": 2,
+            "Max": 2,
+        }
+
         stat_items = []
         for key, value in stats.items():
-            if isinstance(value, (int, np.integer)):
-                display_value = f"{int(value)}"
-            else:
-                display_value = format_value(value, 3)
+            decimals = stat_precision.get(key, 3)
+            display_value = format_value(value, decimals)
             stat_items.append((key, display_value))
 
         st.markdown(
