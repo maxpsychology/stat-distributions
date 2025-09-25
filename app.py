@@ -51,9 +51,14 @@ st.markdown(
     [data-testid="stSidebar"] .stTextInput input {
         border-radius: 0.75rem;
         border: 1px solid rgba(255, 255, 255, 0.32);
-        background: rgba(255, 255, 255, 0.16);
-        color: inherit;
+        background: rgba(255, 255, 255, 0.96);
+        color: #10163a !important;
         font-weight: 600;
+        box-shadow: 0 6px 18px rgba(10, 14, 36, 0.12);
+    }
+    [data-testid="stSidebar"] .stNumberInput input::placeholder,
+    [data-testid="stSidebar"] .stTextInput input::placeholder {
+        color: rgba(16, 22, 60, 0.56);
     }
     [data-testid="stSidebar"] .stButton button,
     [data-testid="stSidebar"] .stDownloadButton button {
@@ -326,12 +331,14 @@ with recent_box:
             for v in reversed(recent_values)
         )
         st.markdown(f"<div class='recent-values'>{items}</div>", unsafe_allow_html=True)
-# ------------- Nagłówek -------------
+
+ ------------- Nagłówek -------------
 var_label_display = html.escape(var_label)
 st.markdown(
     f"<h1 class='main-title'>Rozkład zmiennej: <span>{var_label_display}</span></h1>",
     unsafe_allow_html=True,
 )
+
 # ------------- Główna siatka -------------
 left, right = st.columns([2, 1], gap="large")
 
